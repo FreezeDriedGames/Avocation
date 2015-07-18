@@ -27,19 +27,26 @@ using System.Collections.Generic;
 using System.Collections;
 
 // Send on unreliable channel and only update once every second
-[NetworkSettings(channel=1, sendInterval=1.0f)]
-public class PlayerManager : NetworkBehaviour
+//[NetworkSettings(channel=1, sendInterval=1.0f)]
+[AddComponentMenu("Toxic/Networking/Player Manager")]
+public class PlayerManager : MonoBehaviour
 {
-	public class PlayerInfoResponse : MessageBase
+	public class PlayerInfoResponseMessage : MessageBase
 	{
 		public string name;
+	}
+
+	public class PlayerInfoUpdateMessage : MessageBase
+	{
 		public int id;
+		public int ping;
+		public bool ready;
 	}
 
 	public struct PlayerData
 	{
 		public string name;
-		//public string ip; // server only
+		public string ip; // server only
 		public int ping;
 		public bool ready;
 	}
@@ -60,23 +67,26 @@ public class PlayerManager : NetworkBehaviour
 		}
 	}
 
-	[SyncVar]
-	private Dictionary<int, PlayerData> _player_data = new Dictionary<int, PlayerData>();
-	private Dictionary<int, int> _connection_ids = new Dictionary<int, int>();
+	//public float updateInterval = 1.0f;
 
-	private int _local_player_id = -1;
-	private int _next_player_id = 0;
+	// <Connection ID, PlayerData>
+	private Dictionary<int, PlayerData> _player_data = new Dictionary<int, PlayerData>();
 
 	private ToxicNetworkManager _network_mgr = null;
 
+	private int _local_player_id = -1;
+
+	//private float _time_since_update = 0.0f;
+
 	// Public API
-	[Command]
-	public void CmdSetReady(int id, bool ready)
+	public void SetReady(bool ready)
 	{
-		PlayerData pd = _player_data[id];
+		PlayerData pd = _player_data[_local_player_id];
 		pd.ready = ready;
 		
-		_player_data[id] = pd;
+		_player_data[_local_player_id] = pd;
+
+		_network_mgr.client.connection.Send(MessageIDs.PlayerReady, new IntegerMessage(System.Convert.ToInt32(ready)));
 	}
 
 
@@ -106,26 +116,43 @@ public class PlayerManager : NetworkBehaviour
 	// Do ping updates every so many intervals here?
 	void Update()
 	{
+		if (!_network_mgr.isHost && _network_mgr.isClient) {
+			return;
+		}
+
+		// Update pings
+
+		// Check if all the players are ready. Then initiate a level change.
+		if (Application.loadedLevelName == "MainMenu") {
+			bool all_ready = _player_data.Count > 0;
+
+			foreach (PlayerData pd in _player_data.Values) {
+				if (!pd.ready) {
+					all_ready = false;
+					break;
+				}
+			}
+
+			if (all_ready) {
+				_network_mgr.ServerChangeScene(_network_mgr.levels[0]);
+			}
+		}
 	}
 
 	private void OnHostStart()
 	{
-		_local_player_id = _next_player_id;
-		++_next_player_id;
-
-		_connection_ids.Add(_network_mgr.client.connection.connectionId, _local_player_id);
-
 		PlayerData pd = new PlayerData();
 		pd.name = _local_player_id.ToString(); // Replace with actual local user name
 		pd.ping = 0;
 		pd.ready = false;
 		
-		_player_data.Add(_local_player_id, pd);
+		_player_data.Add(_local_player_id, pd); // Local player ID is -1
 	}
 
 	private void OnClientStart(NetworkClient client)
 	{
 		client.RegisterHandler(MessageIDs.PlayerInfoRequest, OnPlayerInfoRequest);
+		client.RegisterHandler(MessageIDs.PlayerInfoUpdate, OnPlayerInfoUpdate);
 	}
 
 	private void OnServerStart()
@@ -134,34 +161,39 @@ public class PlayerManager : NetworkBehaviour
 		_network_mgr.ServerDisconnect += OnServerDisconnect;
 
 		NetworkServer.RegisterHandler(MessageIDs.PlayerInfoResponse, OnPlayerInfoResponse);
+		NetworkServer.RegisterHandler(MessageIDs.PlayerReady, OnPlayerReady);
 	}
 
 	// Server callbacks
 	private void OnServerConnect(NetworkConnection conn)
 	{
-		int id = _next_player_id;
-		++_next_player_id;
-
-		conn.Send(MessageIDs.PlayerInfoRequest, new IntegerMessage(id));
+		conn.Send(MessageIDs.PlayerInfoRequest, new IntegerMessage(conn.connectionId));
 	}
 
 	private void OnServerDisconnect(NetworkConnection conn)
 	{
-		_player_data.Remove(_connection_ids[conn.connectionId]);
-		_connection_ids.Remove(conn.connectionId);
+		_player_data.Remove(conn.connectionId);
 	}
 
 	private void OnPlayerInfoResponse(NetworkMessage msg)
 	{
-		PlayerInfoResponse response = msg.ReadMessage<PlayerInfoResponse>();
+		PlayerInfoResponseMessage response = msg.ReadMessage<PlayerInfoResponseMessage>();
 
 		PlayerData pd = new PlayerData();
 		pd.name = response.name;
+		pd.ip = msg.conn.address;
 		pd.ping = 0;
 		pd.ready = false;
 
-		_connection_ids.Add(msg.conn.connectionId, response.id);
-		_player_data.Add(response.id, pd);
+		_player_data.Add(msg.conn.connectionId, pd);
+	}
+
+	private void OnPlayerReady(NetworkMessage msg)
+	{
+		PlayerData pd = _player_data[msg.conn.connectionId];
+		pd.ready = msg.ReadMessage<IntegerMessage>().value != 0;
+
+		_player_data[msg.conn.connectionId] = pd;
 	}
 
 	// Client callbacks
@@ -169,10 +201,26 @@ public class PlayerManager : NetworkBehaviour
 	{
 		_local_player_id = msg.ReadMessage<IntegerMessage>().value;
 
-		PlayerInfoResponse response = new PlayerInfoResponse();
+		PlayerData pd = new PlayerData();
+		pd.name = _local_player_id.ToString(); // Use local player name
+		pd.ready = false;
+
+		_player_data.Add(_local_player_id, pd);
+
+		PlayerInfoResponseMessage response = new PlayerInfoResponseMessage();
 		response.name = _local_player_id.ToString(); // replace with local player name
-		response.id = _local_player_id;
 
 		msg.conn.Send(MessageIDs.PlayerInfoResponse, response);
+	}
+
+	private void OnPlayerInfoUpdate(NetworkMessage msg)
+	{
+		PlayerInfoUpdateMessage ud = msg.ReadMessage<PlayerInfoUpdateMessage>();
+
+		PlayerData pd = _player_data[ud.id];
+		pd.ping = ud.ping;
+		pd.ready = ud.ready;
+
+		_player_data[ud.id] = pd;
 	}
 }

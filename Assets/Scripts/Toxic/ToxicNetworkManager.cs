@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 using UnityEngine.Networking;
 using UnityEngine;
+using System.Collections.Generic;
 using System.Collections;
 
 [AddComponentMenu("Toxic/Networking/Toxic Network Manager")]
@@ -32,35 +33,42 @@ public class ToxicNetworkManager : NetworkManager
 	public delegate void EmptyCallback();
 
 	// Host
-	public event EmptyCallback HostStarted;
+	public event EmptyCallback HostStarted = delegate {};
 
 	// Server
 	public delegate void ServerAddPlayerCallback(NetworkConnection conn, short player_controller_id);
 	public delegate void ServerRemovePlayerCallback(NetworkConnection conn, PlayerController player);
 	public delegate void ServerSceneChangedCallback(string scene_name);
 
-	public event EmptyCallback ServerStarted;
-	public event ServerAddPlayerCallback ServerAddPlayer;
-	public event CallbackDelegate ServerConnect;
-	public event CallbackDelegate ServerDisconnect;
-	public event ErrorCallback ServerError;
-	public event CallbackDelegate ServerReady;
-	public event ServerRemovePlayerCallback ServerRemovePlayer;
-	public event ServerSceneChangedCallback ServerSceneChanged;
+	public event EmptyCallback ServerStarted = delegate {};
+	public event ServerAddPlayerCallback ServerAddPlayer = delegate {};
+	public event CallbackDelegate ServerConnect = delegate {};
+	public event CallbackDelegate ServerDisconnect = delegate {};
+	public event ErrorCallback ServerError = delegate {};
+	public event CallbackDelegate ServerReady = delegate {};
+	public event ServerRemovePlayerCallback ServerRemovePlayer = delegate {};
+	public event ServerSceneChangedCallback ServerSceneChanged = delegate {};
 
 	// Client
 	public delegate void ClientStartCallback(NetworkClient client);
 
-	public event ClientStartCallback ClientStarted;
-	public event CallbackDelegate ClientConnect;
-	public event CallbackDelegate ClientDisconnect;
-	public event ErrorCallback ClientError;
-	public event CallbackDelegate ClientNotReady;
-	public event CallbackDelegate ClientSceneChanged;
+	public event ClientStartCallback ClientStarted = delegate {};
+	public event CallbackDelegate ClientConnect = delegate {};
+	public event CallbackDelegate ClientDisconnect = delegate {};
+	public event ErrorCallback ClientError = delegate {};
+	public event CallbackDelegate ClientNotReady = delegate {};
+	public event CallbackDelegate ClientSceneChanged = delegate {};
 
 	public bool isHost = false;
 	public bool isServer = false;
 	public bool isClient = false;
+
+	public List<string> levels;
+
+	// Load user created asset bundles here and add the scenes to the level list.
+	void Start()
+	{
+	}
 
 	override public NetworkClient StartHost()
 	{

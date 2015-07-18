@@ -26,4 +26,6 @@ public class MessageIDs
 {
 	public const short PlayerInfoRequest = MsgType.Highest + 1;
 	public const short PlayerInfoResponse = MsgType.Highest + 2;
+	public const short PlayerInfoUpdate = MsgType.Highest + 3;
+	public const short PlayerReady = MsgType.Highest + 4;
 }

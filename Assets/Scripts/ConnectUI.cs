@@ -5,6 +5,7 @@ using System.Collections;
 public class ConnectUI : MonoBehaviour
 {
 	private ToxicNetworkManager _network_mgr = null;
+	private PlayerManager _player_mgr = null;
 
 	public void Start()
 	{
@@ -16,9 +17,14 @@ public class ConnectUI : MonoBehaviour
 		}
 
 		_network_mgr = net_mgr.GetComponent<ToxicNetworkManager>();
+		_player_mgr = net_mgr.GetComponent<PlayerManager>();
 
 		if (!_network_mgr) {
 			Debug.LogError("Could not find a 'ToxicNetworkManager' on global GameObject 'NetworkManager'.");
+		}
+
+		if (!_player_mgr) {
+			Debug.LogError("Could not find a 'PlayerManager' on global GameObject 'NetworkManager'.");
 		}
 	}
 
@@ -70,7 +76,7 @@ public class ConnectUI : MonoBehaviour
 	public void SetReady()
 	{
 		Toggle checkbox = transform.FindChild("ReadyCheckbox").GetComponent<Toggle>();
-		//_network_mgr.Ready(checkbox.isOn);
+		_player_mgr.SetReady(checkbox.isOn);
 	}
 
 	private void ShowReady()
