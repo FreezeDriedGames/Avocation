@@ -23,6 +23,9 @@ THE SOFTWARE.
 using UnityEngine;
 using System.Collections;
 
+namespace Toxic
+{
+
 [AddComponentMenu("Toxic/Movement/Movement Commander")]
 [RequireComponent(typeof(CameraController))]
 public class MovementCommander : MonoBehaviour
@@ -77,4 +80,6 @@ public class MovementCommander : MonoBehaviour
 			_mc.MoveTowards(dir);
 		}
 	}
+}
+
 }

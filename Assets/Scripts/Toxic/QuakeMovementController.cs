@@ -28,6 +28,9 @@ TODO: Implement slope handling.
 using UnityEngine;
 using System.Collections;
 
+namespace Toxic
+{
+
 [AddComponentMenu("Toxic/Movement/Quake Movement Controller")]
 [RequireComponent(typeof(Rigidbody))]
 public class QuakeMovementController : MonoBehaviour, IMovementController
@@ -154,4 +157,6 @@ public class QuakeMovementController : MonoBehaviour, IMovementController
 
 		_rb.velocity = vel * new_speed;
 	}
+}
+
 }

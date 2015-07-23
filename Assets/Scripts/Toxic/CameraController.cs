@@ -23,6 +23,9 @@ THE SOFTWARE.
 using UnityEngine;
 using System.Collections;
 
+namespace Toxic
+{
+
 [AddComponentMenu("Toxic/Camera/Camera Controller")]
 public class CameraController : MonoBehaviour
 {
@@ -135,4 +138,6 @@ public class CameraController : MonoBehaviour
 	{
 		return (angle < 0.0f) ? 360.0f + angle : angle;
 	}
+}
+
 }

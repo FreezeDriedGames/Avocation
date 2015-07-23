@@ -25,8 +25,11 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 
+namespace Toxic
+{
+
 [AddComponentMenu("Toxic/Networking/Toxic Network Manager")]
-public class ToxicNetworkManager : NetworkManager
+public class NetworkManager : UnityEngine.Networking.NetworkManager
 {
 	public delegate void CallbackDelegate(NetworkConnection conn);
 	public delegate void ErrorCallback(NetworkConnection conn, int error_code);
@@ -59,11 +62,32 @@ public class ToxicNetworkManager : NetworkManager
 	public event CallbackDelegate ClientNotReady = delegate {};
 	public event CallbackDelegate ClientSceneChanged = delegate {};
 
-	public bool isHost = false;
-	public bool isServer = false;
-	public bool isClient = false;
-
 	public List<string> levels;
+
+	public bool isHost
+	{
+		get { return _is_host; }
+	}
+
+	public bool isServer
+	{
+		get { return _is_server; }
+	}
+
+	public bool isClient
+	{
+		get { return _is_client; }
+	}
+
+	public bool isSingleplayer
+	{
+		get { return _is_singleplayer; }
+	}
+
+	private bool _is_host = false;
+	private bool _is_server = false;
+	private bool _is_client = false;
+	private bool _is_singleplayer = true;
 
 	// Load user created asset bundles here and add the scenes to the level list.
 	void Start()
@@ -74,7 +98,8 @@ public class ToxicNetworkManager : NetworkManager
 	{
 		NetworkClient ret = base.StartHost();
 		HostStarted();
-		isHost = isServer = isClient = true;
+		_is_host = _is_server = _is_client = true;
+		_is_singleplayer = false;
 		return ret;
 	}
 
@@ -83,7 +108,8 @@ public class ToxicNetworkManager : NetworkManager
 	{
 		base.OnStartServer();
 		ServerStarted();
-		isServer = true;
+		_is_singleplayer = false;
+		_is_server = true;
 	}
 
 	override public void OnServerAddPlayer(NetworkConnection conn, short player_controller_id)
@@ -133,7 +159,8 @@ public class ToxicNetworkManager : NetworkManager
 	{
 		base.OnStartClient(client);
 		ClientStarted(client);
-		isClient = true;
+		_is_singleplayer = false;
+		_is_client = true;
 	}
 	
 	override public void OnClientConnect(NetworkConnection conn)
@@ -165,4 +192,6 @@ public class ToxicNetworkManager : NetworkManager
 		base.OnClientSceneChanged(conn);
 		ClientSceneChanged(conn);
 	}
+}
+
 }

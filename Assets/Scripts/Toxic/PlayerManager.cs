@@ -26,6 +26,9 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 
+namespace Toxic
+{
+
 // Send on unreliable channel and only update once every second
 //[NetworkSettings(channel=1, sendInterval=1.0f)]
 [AddComponentMenu("Toxic/Networking/Player Manager")]
@@ -72,7 +75,7 @@ public class PlayerManager : MonoBehaviour
 	// <Connection ID, PlayerData>
 	private Dictionary<int, PlayerData> _player_data = new Dictionary<int, PlayerData>();
 
-	private ToxicNetworkManager _network_mgr = null;
+	private Toxic.NetworkManager _net_mgr = null;
 
 	private int _local_player_id = -1;
 
@@ -86,7 +89,7 @@ public class PlayerManager : MonoBehaviour
 		
 		_player_data[_local_player_id] = pd;
 
-		_network_mgr.client.connection.Send(MessageIDs.PlayerReady, new IntegerMessage(System.Convert.ToInt32(ready)));
+		_net_mgr.client.connection.Send(MessageIDs.PlayerReady, new IntegerMessage(System.Convert.ToInt32(ready)));
 	}
 
 
@@ -102,21 +105,21 @@ public class PlayerManager : MonoBehaviour
 			return;
 		}
 		
-		_network_mgr = net_mgr.GetComponent<ToxicNetworkManager>();
+		_net_mgr = net_mgr.GetComponent<Toxic.NetworkManager>();
 		
-		if (!_network_mgr) {
+		if (!_net_mgr) {
 			Debug.LogError("Could not find a 'ToxicNetworkManager' on global GameObject 'NetworkManager'.");
 		}
 
-		_network_mgr.ServerStarted += OnServerStart;
-		_network_mgr.ClientStarted += OnClientStart;
-		_network_mgr.HostStarted += OnHostStart;
+		_net_mgr.ServerStarted += OnServerStart;
+		_net_mgr.ClientStarted += OnClientStart;
+		_net_mgr.HostStarted += OnHostStart;
 	}
 	
 	// Do ping updates every so many intervals here?
 	void Update()
 	{
-		if (!_network_mgr.isHost && _network_mgr.isClient) {
+		if (!_net_mgr.isHost && _net_mgr.isClient) {
 			return;
 		}
 
@@ -134,7 +137,7 @@ public class PlayerManager : MonoBehaviour
 			}
 
 			if (all_ready) {
-				_network_mgr.ServerChangeScene(_network_mgr.levels[0]);
+				_net_mgr.ServerChangeScene(_net_mgr.levels[0]);
 			}
 		}
 	}
@@ -157,8 +160,8 @@ public class PlayerManager : MonoBehaviour
 
 	private void OnServerStart()
 	{
-		_network_mgr.ServerConnect += OnServerConnect;
-		_network_mgr.ServerDisconnect += OnServerDisconnect;
+		_net_mgr.ServerConnect += OnServerConnect;
+		_net_mgr.ServerDisconnect += OnServerDisconnect;
 
 		NetworkServer.RegisterHandler(MessageIDs.PlayerInfoResponse, OnPlayerInfoResponse);
 		NetworkServer.RegisterHandler(MessageIDs.PlayerReady, OnPlayerReady);
@@ -223,4 +226,6 @@ public class PlayerManager : MonoBehaviour
 
 		_player_data[ud.id] = pd;
 	}
+}
+
 }

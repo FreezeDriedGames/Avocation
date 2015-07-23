@@ -23,6 +23,9 @@ THE SOFTWARE.
 using UnityEngine;
 using System.Collections;
 
+namespace Toxic
+{
+
 [AddComponentMenu("Toxic/Movement/Third Person Movement Controller")]
 [RequireComponent(typeof(Rigidbody))]
 public class ThirdPersonMovementController : MonoBehaviour, IMovementController
@@ -103,4 +106,6 @@ public class ThirdPersonMovementController : MonoBehaviour, IMovementController
 	{
 
 	}
+}
+
 }

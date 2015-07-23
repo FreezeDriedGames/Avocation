@@ -4,8 +4,8 @@ using System.Collections;
 
 public class ConnectUI : MonoBehaviour
 {
-	private ToxicNetworkManager _network_mgr = null;
-	private PlayerManager _player_mgr = null;
+	private Toxic.NetworkManager _network_mgr = null;
+	private Toxic.PlayerManager _player_mgr = null;
 
 	public void Start()
 	{
@@ -16,8 +16,8 @@ public class ConnectUI : MonoBehaviour
 			return;
 		}
 
-		_network_mgr = net_mgr.GetComponent<ToxicNetworkManager>();
-		_player_mgr = net_mgr.GetComponent<PlayerManager>();
+		_network_mgr = net_mgr.GetComponent<Toxic.NetworkManager>();
+		_player_mgr = net_mgr.GetComponent<Toxic.PlayerManager>();
 
 		if (!_network_mgr) {
 			Debug.LogError("Could not find a 'ToxicNetworkManager' on global GameObject 'NetworkManager'.");
