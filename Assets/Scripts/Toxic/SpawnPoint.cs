@@ -26,13 +26,17 @@ TODO: Implement SpawnableEditor GUI for easier selection of spawnables.
 
 using UnityEngine.Networking;
 using UnityEngine;
-using UnityEditor;
 using System.Collections;
 using System.Collections.Generic;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Toxic
 {
 
+#if UNITY_EDITOR
 public class SpawnableEditor : Editor
 {
 	override public void OnInspectorGUI()
@@ -52,6 +56,7 @@ public class SpawnableEditor : Editor
 		}
 	}
 }
+#endif
 	
 [AddComponentMenu("Toxic/Gameplay/Spawn Point")]
 public class SpawnPoint : NetworkStartPosition
@@ -74,7 +79,7 @@ public class SpawnPoint : NetworkStartPosition
 	void Start()
 	{
 		GameObject net_mgr = GameObject.Find("NetworkManager");
-		
+					
 		if (!net_mgr) {
 			Debug.LogError("Could not find global GameObject with name 'NetworkManager'.");
 			return;
@@ -83,7 +88,7 @@ public class SpawnPoint : NetworkStartPosition
 		_net_mgr = net_mgr.GetComponent<Toxic.NetworkManager>();
 		
 		if (!_net_mgr) {
-			Debug.LogError("Could not find a 'ToxicNetworkManager' on global GameObject 'NetworkManager'.");
+			Debug.LogError("Could not find a 'Toxic.NetworkManager' on global GameObject 'NetworkManager'.");
 		}
 
 		if (useSeedForRNG) {
@@ -91,28 +96,34 @@ public class SpawnPoint : NetworkStartPosition
 		}
 	}
 
-	public void spawn(int spawn_index)
+	public GameObject spawn(int spawn_index)
 	{
 		_prev_spawn_index = spawn_index;
 
-		GameObject spawned_obj = (GameObject)Instantiate(_net_mgr.spawnPrefabs[spawn_index], transform.position, transform.rotation);
+		GameObject spawned_obj = (GameObject)Instantiate(_net_mgr.spawnPrefabs[spawnables[spawn_index]], transform.position, transform.rotation);
 		
 		if (_net_mgr.isServer) {
 			NetworkServer.Spawn(spawned_obj);
 		}
+
+		return spawned_obj;
 	}
 
-	public void spawn()
+	public GameObject spawn()
 	{
+		int spawn_index = 0;
+
 		switch (spawnSelectionMethod) {
 			case PlayerSpawnMethod.Random:
-				spawn(rng.Next(spawnables.Count));
+				spawn_index = rng.Next(spawnables.Count);
 				break;
 
 			case PlayerSpawnMethod.RoundRobin:
-				spawn((_prev_spawn_index + 1) % spawnables.Count);
+				spawn_index = (_prev_spawn_index + 1) % spawnables.Count;
 				break;
 		}
+
+		return spawn(spawn_index);
 	}
 }
 

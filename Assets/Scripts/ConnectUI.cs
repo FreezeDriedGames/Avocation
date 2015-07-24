@@ -20,7 +20,7 @@ public class ConnectUI : MonoBehaviour
 		_player_mgr = net_mgr.GetComponent<Toxic.PlayerManager>();
 
 		if (!_network_mgr) {
-			Debug.LogError("Could not find a 'ToxicNetworkManager' on global GameObject 'NetworkManager'.");
+			Debug.LogError("Could not find a 'Toxic.NetworkManager' on global GameObject 'NetworkManager'.");
 		}
 
 		if (!_player_mgr) {

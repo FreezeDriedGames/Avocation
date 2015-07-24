@@ -52,6 +52,9 @@ public class PlayerManager : MonoBehaviour
 		public string ip; // server only
 		public int ping;
 		public bool ready;
+
+		public NetworkConnection network_connection;
+		public short player_controller_id;
 	}
 
 	public Dictionary<int, PlayerData> playerData
@@ -108,7 +111,8 @@ public class PlayerManager : MonoBehaviour
 		_net_mgr = net_mgr.GetComponent<Toxic.NetworkManager>();
 		
 		if (!_net_mgr) {
-			Debug.LogError("Could not find a 'ToxicNetworkManager' on global GameObject 'NetworkManager'.");
+			Debug.LogError("Could not find a 'Toxic.NetworkManager' on global GameObject 'NetworkManager'.");
+			return;
 		}
 
 		_net_mgr.ServerStarted += OnServerStart;
@@ -144,51 +148,61 @@ public class PlayerManager : MonoBehaviour
 
 	private void OnHostStart()
 	{
-		PlayerData pd = new PlayerData();
-		pd.name = _local_player_id.ToString(); // Replace with actual local user name
-		pd.ping = 0;
-		pd.ready = false;
-		
-		_player_data.Add(_local_player_id, pd); // Local player ID is -1
 	}
 
 	private void OnClientStart(NetworkClient client)
 	{
 		client.RegisterHandler(MessageIDs.PlayerInfoRequest, OnPlayerInfoRequest);
 		client.RegisterHandler(MessageIDs.PlayerInfoUpdate, OnPlayerInfoUpdate);
+
+		_net_mgr.ClientConnect += OnClientConnect;
+		_net_mgr.ClientDisconnect += OnClientDisconnect;
 	}
 
 	private void OnServerStart()
 	{
-		_net_mgr.ServerConnect += OnServerConnect;
-		_net_mgr.ServerDisconnect += OnServerDisconnect;
-
 		NetworkServer.RegisterHandler(MessageIDs.PlayerInfoResponse, OnPlayerInfoResponse);
 		NetworkServer.RegisterHandler(MessageIDs.PlayerReady, OnPlayerReady);
+
+		_net_mgr.ServerConnect += OnServerConnect;
+		_net_mgr.ServerDisconnect += OnServerDisconnect;
+		_net_mgr.ServerAddPlayer += OnServerAddPlayer;
 	}
 
 	// Server callbacks
 	private void OnServerConnect(NetworkConnection conn)
 	{
-		conn.Send(MessageIDs.PlayerInfoRequest, new IntegerMessage(conn.connectionId));
 	}
 
 	private void OnServerDisconnect(NetworkConnection conn)
 	{
-		_player_data.Remove(conn.connectionId);
+		if (_player_data.ContainsKey(conn.connectionId)) {
+			_player_data.Remove(conn.connectionId);
+		}
+	}
+
+	private void OnServerAddPlayer(NetworkConnection conn, short player_controller_id)
+	{
+		PlayerData pd = new PlayerData();
+		pd.ip = conn.address;
+		pd.ping = 0;
+		pd.ready = false;
+		pd.network_connection = conn;
+		pd.player_controller_id = player_controller_id;
+
+		_player_data.Add(conn.connectionId, pd);
+
+		conn.Send(MessageIDs.PlayerInfoRequest, new IntegerMessage(conn.connectionId));
 	}
 
 	private void OnPlayerInfoResponse(NetworkMessage msg)
 	{
 		PlayerInfoResponseMessage response = msg.ReadMessage<PlayerInfoResponseMessage>();
 
-		PlayerData pd = new PlayerData();
+		PlayerData pd = _player_data[msg.conn.connectionId];
 		pd.name = response.name;
-		pd.ip = msg.conn.address;
-		pd.ping = 0;
-		pd.ready = false;
 
-		_player_data.Add(msg.conn.connectionId, pd);
+		_player_data[msg.conn.connectionId] = pd;
 	}
 
 	private void OnPlayerReady(NetworkMessage msg)
@@ -200,15 +214,31 @@ public class PlayerManager : MonoBehaviour
 	}
 
 	// Client callbacks
+	private void OnClientConnect(NetworkConnection conn)
+	{
+		ClientScene.AddPlayer(0);
+	}
+
+	private void OnClientDisconnect(NetworkConnection conn)
+	{
+		if (!_net_mgr.isHost) {
+			_player_data.Clear();
+		}
+	}
+
 	private void OnPlayerInfoRequest(NetworkMessage msg)
 	{
 		_local_player_id = msg.ReadMessage<IntegerMessage>().value;
 
-		PlayerData pd = new PlayerData();
+		PlayerData pd = (_net_mgr.isHost) ? _player_data[msg.conn.connectionId] : new PlayerData();
 		pd.name = _local_player_id.ToString(); // Use local player name
 		pd.ready = false;
 
-		_player_data.Add(_local_player_id, pd);
+		if (_net_mgr.isHost) {
+			_player_data [msg.conn.connectionId] = pd;
+		} else {
+			_player_data.Add (_local_player_id, pd);
+		}
 
 		PlayerInfoResponseMessage response = new PlayerInfoResponseMessage();
 		response.name = _local_player_id.ToString(); // replace with local player name

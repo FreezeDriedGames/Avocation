@@ -114,7 +114,10 @@ public class NetworkManager : UnityEngine.Networking.NetworkManager
 
 	override public void OnServerAddPlayer(NetworkConnection conn, short player_controller_id)
 	{
-		base.OnServerAddPlayer(conn, player_controller_id);
+		if (playerPrefab != null) {
+			base.OnServerAddPlayer(conn, player_controller_id);
+		}
+
 		ServerAddPlayer(conn, player_controller_id);
 	}
 	
