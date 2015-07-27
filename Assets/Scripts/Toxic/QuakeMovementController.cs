@@ -25,6 +25,7 @@ TODO: Implement proper land on ground detection.
 TODO: Implement slope handling.
 ************************************************************************************/
 
+using UnityEngine.Networking;
 using UnityEngine;
 using System.Collections;
 
@@ -33,7 +34,7 @@ namespace Toxic
 
 [AddComponentMenu("Toxic/Movement/Quake Movement Controller")]
 [RequireComponent(typeof(Rigidbody))]
-public class QuakeMovementController : MonoBehaviour, IMovementController
+public class QuakeMovementController : NetworkBehaviour, IMovementController
 {
 	public Vector3 gravityDirection = Vector3.down;
 	public float acceleration = 12.0f;
@@ -50,17 +51,34 @@ public class QuakeMovementController : MonoBehaviour, IMovementController
 
 	private bool _grounded = false;
 
-	private Rigidbody _rb;
+	private Toxic.NetworkManager _net_mgr = null;
+	private Vector3 _move_dir = Vector3.zero;
+	private Rigidbody _rb = null;
+
+	private bool _prev_jump = false;
+	private bool _jump = false;
 
 	public void Start()
 	{
+		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
 		_rb = GetComponent<Rigidbody>();
 	}
 
 	public void FixedUpdate()
 	{
-		// We apply gravity manually for more tuning control
-		_rb.AddForce(gravityDirection * gravity * _rb.mass);
+		if (_net_mgr.isSingleplayer || _net_mgr.isServer)
+		{
+			MoveTowardsImpl(_move_dir);
+			JumpImpl();
+			_rb.AddForce(gravityDirection * gravity * _rb.mass);
+		}
+	}
+
+	// Does not actually determine if you are on the ground. Need some more work to figure this out.
+	// Also need to port over code for dealing with velocities on slopes and stuff.
+	public void OnCollisionEnter(Collision collision)
+	{
+		_grounded = true;
 	}
 
 	public GameObject GetGameObject()
@@ -73,7 +91,33 @@ public class QuakeMovementController : MonoBehaviour, IMovementController
 		return false;
 	}
 
+	// Dir is world space direction.
 	public void MoveTowards(Vector3 dir)
+	{
+		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
+			_move_dir = dir;
+		} else {
+			CmdMoveTowardsRequest(dir);
+		}
+	}
+
+	public void Jump(bool jump)
+	{
+		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
+			_prev_jump = _jump;
+			_jump = jump;
+		} else {
+			CmdJumpRequest(jump);
+		}
+	}
+
+	[Command]
+	private void CmdMoveTowardsRequest(Vector3 dir)
+	{
+		_move_dir = dir;
+	}
+
+	private void MoveTowardsImpl(Vector3 dir)
 	{
 		dir.y = 0.0f;
 		dir.Normalize();
@@ -95,22 +139,22 @@ public class QuakeMovementController : MonoBehaviour, IMovementController
 		}
 	}
 
-	public void Jump(bool jump)
+	[Command]
+	private void CmdJumpRequest(bool jump)
 	{
-		if (_grounded) {
+		_prev_jump = _jump;
+		_jump = jump;
+	}
+
+	private void JumpImpl()
+	{
+		if (_grounded && !_prev_jump && _jump) {
 			_rb.AddForce(-gravityDirection * jumpSpeed, ForceMode.VelocityChange);
 			_grounded = false;
 		}
 	}
 
-	// Does not actually determine if you are on the ground. Need some more work to figure this out.
-	// Also need to port over code for dealing with velocities on slopes and stuff.
-	public void OnCollisionEnter(Collision collision)
-	{
-		_grounded = true;
-	}
-
-	private void Accelerate(Vector3 dir, float speed, float acceleration)
+		private void Accelerate(Vector3 dir, float speed, float acceleration)
 	{
 		float add_speed = speed - Vector3.Dot(_rb.velocity, dir);
 

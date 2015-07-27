@@ -50,7 +50,7 @@ public class ThirdPersonMovementController : NetworkBehaviour, IMovementControll
 
 	public void Start()
 	{
-		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance ();
+		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
 
 		_rb = GetComponent<Rigidbody>();
 		_rb.maxAngularVelocity = float.PositiveInfinity;

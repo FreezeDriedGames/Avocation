@@ -78,7 +78,6 @@ public class CameraController : MonoBehaviour
 		} else if (freeLookWhenDetached) {
 			Vector3 dir = transform.TransformDirection(Input.GetAxis("Horizontal"), 0.0f, Input.GetAxis("Vertical"));
 
-//			transform.Translate(dir * freeLookSpeed * Time.deltaTime);
 			transform.position += dir * freeLookSpeed * Time.deltaTime;
 		}
 	}
