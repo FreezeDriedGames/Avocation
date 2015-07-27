@@ -95,7 +95,7 @@ public class QuakeMovementController : MonoBehaviour, IMovementController
 		}
 	}
 
-	public void Jump()
+	public void Jump(bool jump)
 	{
 		if (_grounded) {
 			_rb.AddForce(-gravityDirection * jumpSpeed, ForceMode.VelocityChange);

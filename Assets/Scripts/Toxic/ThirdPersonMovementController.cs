@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ************************************************************************************/
 
+using UnityEngine.Networking;
 using UnityEngine;
 using System.Collections;
 
@@ -28,7 +29,7 @@ namespace Toxic
 
 [AddComponentMenu("Toxic/Movement/Third Person Movement Controller")]
 [RequireComponent(typeof(Rigidbody))]
-public class ThirdPersonMovementController : MonoBehaviour, IMovementController
+public class ThirdPersonMovementController : NetworkBehaviour, IMovementController
 {
 	public Vector3 gravityDirection = Vector3.down;
 	public float gravity = 10.0f;
@@ -40,19 +41,28 @@ public class ThirdPersonMovementController : MonoBehaviour, IMovementController
 
 	public bool moveDirSeparateFromAngle = false;
 
-	private Rigidbody _rb;
+	private Toxic.NetworkManager _net_mgr = null;
+	private Vector3 _move_dir = Vector3.zero;
+	private Rigidbody _rb = null;
+
+	private bool _prev_jump = false;
+	private bool _jump = false;
 
 	public void Start()
 	{
+		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance ();
+
 		_rb = GetComponent<Rigidbody>();
 		_rb.maxAngularVelocity = float.PositiveInfinity;
 	}
 
 	public void FixedUpdate()
 	{
-
-		// We apply gravity manually for more tuning control
-		_rb.AddForce(gravityDirection * gravity * _rb.mass);
+		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
+			MoveTowardsImpl(_move_dir);
+			JumpImpl();
+			_rb.AddForce (gravityDirection * gravity * _rb.mass);
+		}
 	}
 
 	public GameObject GetGameObject()
@@ -64,9 +74,34 @@ public class ThirdPersonMovementController : MonoBehaviour, IMovementController
 	{
 		return true;
 	}
-	
+
 	// Dir is world space direction.
 	public void MoveTowards(Vector3 dir)
+	{
+		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
+			_move_dir = dir;
+		} else {
+			CmdMoveTowardsRequest(dir);
+		}
+	}
+
+	public void Jump(bool jump)
+	{
+		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
+			_prev_jump = _jump;
+			_jump = jump;
+		} else {
+			CmdJumpRequest(jump);
+		}
+	}
+
+	[Command]
+	private void CmdMoveTowardsRequest(Vector3 dir)
+	{
+		_move_dir = dir;
+	}
+
+	private void MoveTowardsImpl(Vector3 dir)
 	{
 		// We are not holding a button, so stop rotating.
 		if (dir == Vector3.zero) {
@@ -102,9 +137,19 @@ public class ThirdPersonMovementController : MonoBehaviour, IMovementController
 		}
 	}
 
-	public void Jump()
+	[Command]
+	private void CmdJumpRequest(bool jump)
 	{
+		_prev_jump = _jump;
+		_jump = jump;
+	}
 
+	private void JumpImpl()
+	{
+		// If we are on the ground
+		// If we haven't been holding down the jump key.
+		if (!_prev_jump && _jump) {
+		}
 	}
 }
 

@@ -94,6 +94,24 @@ public class NetworkManager : UnityEngine.Networking.NetworkManager
 	{
 	}
 
+	static public NetworkManager FindNetMgrInstance()
+	{
+		GameObject net_mgr = GameObject.Find("NetworkManager");
+		
+		if (!net_mgr) {
+			Debug.LogError("Could not find global GameObject with name 'NetworkManager'.");
+			return null;
+		}
+		
+		NetworkManager nm = net_mgr.GetComponent<Toxic.NetworkManager>();
+		
+		if (!nm) {
+			Debug.LogError("Could not find a 'Toxic.NetworkManager' on global GameObject 'NetworkManager'.");
+		}
+
+		return nm;
+	}
+
 	override public NetworkClient StartHost()
 	{
 		NetworkClient ret = base.StartHost();

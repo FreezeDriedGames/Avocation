@@ -33,6 +33,9 @@ public class MovementCommander : MonoBehaviour
 	private IMovementController _mc;
 	private CameraController _cc;
 
+	private Vector3 _prev_dir = Vector3.zero;
+	private bool _prev_jump = false;
+
 	void Start()
 	{
 		_cc = GetComponent<CameraController>();
@@ -60,8 +63,12 @@ public class MovementCommander : MonoBehaviour
 
 		// For some reason this doesn't update immediately. There is some stutter when moving the camera.
 		if (_mc != null) {
-			if (Input.GetButtonDown("Jump")) {
-				_mc.Jump();
+			bool jump = Input.GetButtonDown("Jump");
+
+			// Don't spam the network with redundant data.
+			if (jump != _prev_jump) {
+				_mc.Jump(jump);
+				_prev_jump = jump;
 			}
 
 			if (!_mc.ControlsOrientation()) {
@@ -77,7 +84,12 @@ public class MovementCommander : MonoBehaviour
 	{
 		if (_mc != null) {
 			Vector3 dir = transform.TransformDirection(Input.GetAxis("Horizontal"), 0.0f, Input.GetAxis("Vertical"));
-			_mc.MoveTowards(dir);
+
+			// Don't spam the network with redundant data.
+			if (dir != _prev_dir) {
+				_mc.MoveTowards(dir);
+				_prev_dir = dir;
+			}
 		}
 	}
 }

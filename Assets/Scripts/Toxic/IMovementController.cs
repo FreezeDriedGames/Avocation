@@ -35,7 +35,7 @@ public interface IMovementController
 
 	// Dir is world space direction.
 	void MoveTowards(Vector3 dir);
-	void Jump();
+	void Jump(bool jump);
 }
 
 }

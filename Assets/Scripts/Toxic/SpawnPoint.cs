@@ -77,20 +77,9 @@ public class SpawnPoint : NetworkStartPosition
 	private int _prev_spawn_index = -1;
 
 	void Start()
-	{
-		GameObject net_mgr = GameObject.Find("NetworkManager");
-					
-		if (!net_mgr) {
-			Debug.LogError("Could not find global GameObject with name 'NetworkManager'.");
-			return;
-		}
+	{		
+		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
 		
-		_net_mgr = net_mgr.GetComponent<Toxic.NetworkManager>();
-		
-		if (!_net_mgr) {
-			Debug.LogError("Could not find a 'Toxic.NetworkManager' on global GameObject 'NetworkManager'.");
-		}
-
 		if (useSeedForRNG) {
 			rng = new System.Random(seed);
 		}

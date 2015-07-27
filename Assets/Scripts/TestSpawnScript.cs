@@ -58,7 +58,7 @@ public class TestSpawnScript : MonoBehaviour
 				Toxic.SpawnPoint sp = objects[spawner].GetComponent<Toxic.SpawnPoint>();
 				GameObject player = sp.spawn();
 
-				NetworkServer.ReplacePlayerForConnection(pd.network_connection, player, pd.player_controller_id); 				
+				NetworkServer.ReplacePlayerForConnection(pd.network_connection, player, pd.player_controller_id);
 
 				spawner = (spawner + 1) % objects.Length;
 			}

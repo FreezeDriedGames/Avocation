@@ -101,20 +101,12 @@ public class PlayerManager : MonoBehaviour
 	{
 		DontDestroyOnLoad(this);
 
-		GameObject net_mgr = GameObject.Find("NetworkManager");
-		
-		if (!net_mgr) {
-			Debug.LogError("Could not find global GameObject with name 'NetworkManager'.");
-			return;
-		}
-		
-		_net_mgr = net_mgr.GetComponent<Toxic.NetworkManager>();
-		
-		if (!_net_mgr) {
-			Debug.LogError("Could not find a 'Toxic.NetworkManager' on global GameObject 'NetworkManager'.");
-			return;
-		}
+		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
 
+		if (!_net_mgr) {
+			return;
+		}
+		
 		_net_mgr.ServerStarted += OnServerStart;
 		_net_mgr.ClientStarted += OnClientStart;
 		_net_mgr.HostStarted += OnHostStart;
