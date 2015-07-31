@@ -26,16 +26,28 @@ using System.Collections;
 namespace Toxic
 {
 
-public interface IMovementController
-{
-	GameObject GetGameObject();
+	public class MovementControllerBase : MonoBehaviour
+	{
+		protected Vector3 _move_dir = Vector3.zero;
+		protected bool _prev_jump = false;
+		protected bool _jump = false;
 
-	// Does the move movement controller update the orientation of the object it is on?
-	bool ControlsOrientation();
+		virtual public bool ControlsOrientation()
+		{
+			return true;
+		}
 
-	// Dir is world space direction.
-	void MoveTowards(Vector3 dir);
-	void Jump(bool jump);
-}
+		// Dir is world space direction.
+		virtual public void MoveTowards(Vector3 dir)
+		{
+			_move_dir = dir;
+		}
+
+		virtual public void Jump(bool jump)
+		{
+			_prev_jump = _jump;
+			_jump = jump;
+		}
+	}
 
 }

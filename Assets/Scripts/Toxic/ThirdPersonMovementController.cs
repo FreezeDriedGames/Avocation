@@ -20,137 +20,84 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ************************************************************************************/
 
-using UnityEngine.Networking;
 using UnityEngine;
 using System.Collections;
 
 namespace Toxic
 {
 
-[AddComponentMenu("Toxic/Movement/Third Person Movement Controller")]
-[RequireComponent(typeof(Rigidbody))]
-public class ThirdPersonMovementController : NetworkBehaviour, IMovementController
-{
-	public Vector3 gravityDirection = Vector3.down;
-	public float gravity = 10.0f;
-
-	public float angularSpeed = 500.0f;
-	public float speed = 10.0f;
-
-	public float snapAngle = 10.0f;
-
-	public bool moveDirSeparateFromAngle = false;
-
-	private Toxic.NetworkManager _net_mgr = null;
-	private Vector3 _move_dir = Vector3.zero;
-	private Rigidbody _rb = null;
-
-	private bool _prev_jump = false;
-	private bool _jump = false;
-
-	public void Start()
+	[AddComponentMenu("Toxic/Movement/Third Person Movement Controller")]
+	[RequireComponent(typeof(Rigidbody))]
+	public class ThirdPersonMovementController : MovementControllerBase
 	{
-		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
+		public Vector3 gravityDirection = Vector3.down;
+		public float gravity = 10.0f;
 
-		_rb = GetComponent<Rigidbody>();
-		_rb.maxAngularVelocity = float.PositiveInfinity;
-	}
+		public float angularSpeed = 500.0f;
+		public float speed = 10.0f;
 
-	public void FixedUpdate()
-	{
-		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
+		public float snapAngle = 10.0f;
+
+		public bool moveDirSeparateFromAngle = false;
+
+		private Rigidbody _rb = null;
+
+		public void Start()
+		{
+			_rb = GetComponent<Rigidbody>();
+			_rb.maxAngularVelocity = float.PositiveInfinity;
+		}
+
+		public void FixedUpdate()
+		{
 			MoveTowardsImpl(_move_dir);
 			JumpImpl();
-			_rb.AddForce (gravityDirection * gravity * _rb.mass);
-		}
-	}
-
-	public GameObject GetGameObject()
-	{
-		return gameObject;
-	}
-	
-	public bool ControlsOrientation()
-	{
-		return true;
-	}
-
-	// Dir is world space direction.
-	public void MoveTowards(Vector3 dir)
-	{
-		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
-			_move_dir = dir;
-		} else {
-			CmdMoveTowardsRequest(dir);
-		}
-	}
-
-	public void Jump(bool jump)
-	{
-		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
-			_prev_jump = _jump;
-			_jump = jump;
-		} else {
-			CmdJumpRequest(jump);
-		}
-	}
-
-	[Command]
-	private void CmdMoveTowardsRequest(Vector3 dir)
-	{
-		_move_dir = dir;
-	}
-
-	private void MoveTowardsImpl(Vector3 dir)
-	{
-		// We are not holding a button, so stop rotating.
-		if (dir == Vector3.zero) {
-			_rb.angularVelocity = dir;
-			_rb.velocity = dir;
-			return;
+			_rb.AddForce(gravityDirection * gravity * _rb.mass);
 		}
 
-		dir.y = 0.0f;
-		dir.Normalize();
+		private void MoveTowardsImpl(Vector3 dir)
+		{
+			// We are not holding a button, so stop rotating.
+			if (dir == Vector3.zero) {
+				_rb.angularVelocity = dir;
+				_rb.velocity = dir;
+				return;
+			}
 
-		Vector3 forward = transform.forward;
-		Vector3 right = transform.right;
+			dir.y = 0.0f;
+			dir.Normalize();
 
-		forward.y = right.y = 0.0f;
-		forward.Normalize();
-		right.Normalize();
+			Vector3 forward = transform.forward;
+			Vector3 right = transform.right;
 
-		float angle = Vector3.Angle(forward, dir);
-		float direction = (Vector3.Dot(right, dir) > 0.0f) ? 1.0f : -1.0f;
+			forward.y = right.y = 0.0f;
+			forward.Normalize();
+			right.Normalize();
 
-		if (angle < snapAngle) {
-			// If I use Mathf.Deg2Rad here, I get some stuttering, even though Vector3.Angle() returns degrees. :/
-			_rb.angularVelocity = new Vector3(0.0f, angle * direction, 0.0f);
-		} else {
-			_rb.angularVelocity = new Vector3(0.0f, angularSpeed * direction * Mathf.Deg2Rad, 0.0f);
+			float angle = Vector3.Angle(forward, dir);
+			float direction = (Vector3.Dot(right, dir) > 0.0f) ? 1.0f : -1.0f;
+
+			if (angle < snapAngle) {
+				// If I use Mathf.Deg2Rad here, I get some stuttering, even though Vector3.Angle() returns degrees. :/
+				_rb.angularVelocity = new Vector3(0.0f, angle * direction, 0.0f);
+			} else {
+				_rb.angularVelocity = new Vector3(0.0f, angularSpeed * direction * Mathf.Deg2Rad, 0.0f);
+			}
+
+			if (moveDirSeparateFromAngle) {
+				_rb.velocity = dir * speed;
+			} else {
+				_rb.velocity = transform.forward * speed;
+			}
 		}
 
-		if (moveDirSeparateFromAngle) {
-			_rb.velocity = dir * speed;
-		} else {
-			_rb.velocity = transform.forward * speed;
+		private void JumpImpl()
+		{
+			// If we are on the ground
+			// If we haven't been holding down the jump key.
+			if (!_prev_jump && _jump) {
+			}
 		}
 	}
-
-	[Command]
-	private void CmdJumpRequest(bool jump)
-	{
-		_prev_jump = _jump;
-		_jump = jump;
-	}
-
-	private void JumpImpl()
-	{
-		// If we are on the ground
-		// If we haven't been holding down the jump key.
-		if (!_prev_jump && _jump) {
-		}
-	}
-}
 
 }

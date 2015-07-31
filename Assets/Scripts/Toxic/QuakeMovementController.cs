@@ -25,182 +25,134 @@ TODO: Implement proper land on ground detection.
 TODO: Implement slope handling.
 ************************************************************************************/
 
-using UnityEngine.Networking;
 using UnityEngine;
 using System.Collections;
 
 namespace Toxic
 {
 
-[AddComponentMenu("Toxic/Movement/Quake Movement Controller")]
-[RequireComponent(typeof(Rigidbody))]
-public class QuakeMovementController : NetworkBehaviour, IMovementController
-{
-	public Vector3 gravityDirection = Vector3.down;
-	public float acceleration = 12.0f;
-	public float friction = 6.0f;
-	public float speed = 10.0f;
-	public float stopSpeed = 100.0f;
-
-	public float airAcceleration = 4.0f; 
-	public float airDeceleration = 1.35f;
-	public float airSpeed = 4.0f;
-
-	public float jumpSpeed = 4.0f;
-	public float gravity = 10.0f;
-
-	private bool _grounded = false;
-
-	private Toxic.NetworkManager _net_mgr = null;
-	private Vector3 _move_dir = Vector3.zero;
-	private Rigidbody _rb = null;
-
-	private bool _prev_jump = false;
-	private bool _jump = false;
-
-	public void Start()
+	[AddComponentMenu("Toxic/Movement/Quake Movement Controller")]
+	[RequireComponent(typeof(Rigidbody))]
+	public class QuakeMovementController : MovementControllerBase
 	{
-		_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
-		_rb = GetComponent<Rigidbody>();
-	}
+		public Vector3 gravityDirection = Vector3.down;
+		public float acceleration = 12.0f;
+		public float friction = 6.0f;
+		public float speed = 10.0f;
+		public float stopSpeed = 100.0f;
 
-	public void FixedUpdate()
-	{
-		if (_net_mgr.isSingleplayer || _net_mgr.isServer)
+		public float airAcceleration = 4.0f; 
+		public float airDeceleration = 1.35f;
+		public float airSpeed = 4.0f;
+
+		public float jumpSpeed = 4.0f;
+		public float gravity = 10.0f;
+
+		private bool _grounded = false;
+
+		private Rigidbody _rb = null;
+
+		public void Start()
+		{
+			_rb = GetComponent<Rigidbody>();
+		}
+
+		public void FixedUpdate()
 		{
 			MoveTowardsImpl(_move_dir);
 			JumpImpl();
 			_rb.AddForce(gravityDirection * gravity * _rb.mass);
 		}
-	}
 
-	// Does not actually determine if you are on the ground. Need some more work to figure this out.
-	// Also need to port over code for dealing with velocities on slopes and stuff.
-	public void OnCollisionEnter(Collision collision)
-	{
-		_grounded = true;
-	}
-
-	public GameObject GetGameObject()
-	{
-		return gameObject;
-	}
-
-	public bool ControlsOrientation()
-	{
-		return false;
-	}
-
-	// Dir is world space direction.
-	public void MoveTowards(Vector3 dir)
-	{
-		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
-			_move_dir = dir;
-		} else {
-			CmdMoveTowardsRequest(dir);
+		// Does not actually determine if you are on the ground. Need some more work to figure this out.
+		// Also need to port over code for dealing with velocities on slopes and stuff.
+		public void OnCollisionEnter(Collision collision)
+		{
+			_grounded = true;
 		}
-	}
 
-	public void Jump(bool jump)
-	{
-		if (_net_mgr.isSingleplayer || _net_mgr.isServer) {
-			_prev_jump = _jump;
-			_jump = jump;
-		} else {
-			CmdJumpRequest(jump);
+		override public bool ControlsOrientation()
+		{
+			return false;
 		}
-	}
 
-	[Command]
-	private void CmdMoveTowardsRequest(Vector3 dir)
-	{
-		_move_dir = dir;
-	}
+		private void MoveTowardsImpl(Vector3 dir)
+		{
+			dir.y = 0.0f;
+			dir.Normalize();
 
-	private void MoveTowardsImpl(Vector3 dir)
-	{
-		dir.y = 0.0f;
-		dir.Normalize();
+			// Grounded movement
+			if (_grounded) {
+				Accelerate(dir, speed, acceleration);
+				Friction(stopSpeed, friction, _grounded);
 
-		// Grounded movement
-		if (_grounded) {
-			Accelerate(dir, speed, acceleration);
-			Friction(stopSpeed, friction, _grounded);
+			// Air movement
+			} else {
+				float s = airSpeed;
 
-		// Air movement
-		} else {
-			float s = airSpeed;
+				if (Vector3.Dot(dir, _rb.velocity) < 0.0f) {
+					s *= airDeceleration;
+				}
 
-			if (Vector3.Dot(dir, _rb.velocity) < 0.0f) {
-				s *= airDeceleration;
+				Accelerate(dir, s, airAcceleration);
 			}
-
-			Accelerate(dir, s, airAcceleration);
 		}
-	}
 
-	[Command]
-	private void CmdJumpRequest(bool jump)
-	{
-		_prev_jump = _jump;
-		_jump = jump;
-	}
-
-	private void JumpImpl()
-	{
-		if (_grounded && !_prev_jump && _jump) {
-			_rb.AddForce(-gravityDirection * jumpSpeed, ForceMode.VelocityChange);
-			_grounded = false;
+		private void JumpImpl()
+		{
+			if (_grounded && !_prev_jump && _jump) {
+				_rb.AddForce(-gravityDirection * jumpSpeed, ForceMode.VelocityChange);
+				_grounded = false;
+			}
 		}
-	}
 
 		private void Accelerate(Vector3 dir, float speed, float acceleration)
-	{
-		float add_speed = speed - Vector3.Dot(_rb.velocity, dir);
+		{
+			float add_speed = speed - Vector3.Dot(_rb.velocity, dir);
 
-		if (add_speed <= 0.0f) {
-			return;
-		}
+			if (add_speed <= 0.0f) {
+				return;
+			}
 
-		float accel_speed = (acceleration * Time.fixedDeltaTime) * speed;
+			float accel_speed = (acceleration * Time.fixedDeltaTime) * speed;
 		
-		if (accel_speed > add_speed) {
-			accel_speed = add_speed;
+			if (accel_speed > add_speed) {
+				accel_speed = add_speed;
+			}
+
+			_rb.AddForce(accel_speed * dir, ForceMode.VelocityChange);
 		}
 
-		_rb.AddForce(accel_speed * dir, ForceMode.VelocityChange);
-	}
+		private void Friction(float stop_speed, float friction, bool grounded)
+		{
+			Vector3 vel = _rb.velocity;
+			float speed = vel.magnitude;
 
-	private void Friction(float stop_speed, float friction, bool grounded)
-	{
-		Vector3 vel = _rb.velocity;
-		float speed = vel.magnitude;
+			if (grounded) {
+				float temp = vel.y;
+				vel.y = 0.0f;
 
-		if (grounded) {
-			float temp = vel.y;
-			vel.y = 0.0f;
-
-			speed = vel.magnitude;
-			vel.y = temp;
-		}
+				speed = vel.magnitude;
+				vel.y = temp;
+			}
 		
-		if (speed < 1) {
-			vel.x = 0.0f;
-			vel.z = 0.0f;
-			_rb.velocity = vel;
-			return;
+			if (speed < 1) {
+				vel.x = 0.0f;
+				vel.z = 0.0f;
+				_rb.velocity = vel;
+				return;
+			}
+
+			float drop = 0.0f;
+			float control = (speed < stop_speed) ? stop_speed : speed;
+
+			drop += control * friction * Time.fixedDeltaTime;
+
+			float new_speed = Mathf.Max(speed - drop, 0.0f); // Don't go below zero.
+			new_speed /= speed;
+
+			_rb.velocity = vel * new_speed;
 		}
-
-		float drop = 0.0f;
-		float control = (speed < stop_speed) ? stop_speed : speed;
-
-		drop += control * friction * Time.fixedDeltaTime;
-
-		float new_speed = Mathf.Max(speed - drop, 0.0f); // Don't go below zero.
-		new_speed /= speed;
-
-		_rb.velocity = vel * new_speed;
 	}
-}
 
 }

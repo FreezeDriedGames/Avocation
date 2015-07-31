@@ -20,18 +20,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ************************************************************************************/
 
-using UnityEngine.Networking;
+using UnityEngine;
+using System.Collections;
 
 namespace Toxic
 {
-
-	public class MessageIDs
+	/*
+		The intention is to have a mediator for issuing movement commands.
+		Basically, if we're connected to a server, issue command to server.
+		Otherwise, we are in a singleplayer game, just do it locally.
+	*/
+	[AddComponentMenu("Toxic/Movement/Movement Handler")]
+	public class MovementHandler : MonoBehaviour
 	{
-		public const short PlayerInfoRequest = MsgType.Highest + 1;
-		public const short PlayerInfoResponse = MsgType.Highest + 2;
-		public const short PlayerInfoUpdate = MsgType.Highest + 3;
-		public const short PlayerReady = MsgType.Highest + 4;
-		public const short Highest = PlayerReady;
+		private Toxic.NetworkManager _net_mgr = null;
+
+		void Start()
+		{
+			_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
+
+			if (!_net_mgr || _net_mgr.isSingleplayer) {
+				_net_mgr = null;
+			}
+		}
+
 	}
 
 }

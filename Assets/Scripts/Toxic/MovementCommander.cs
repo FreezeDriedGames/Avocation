@@ -26,72 +26,72 @@ using System.Collections;
 namespace Toxic
 {
 
-[AddComponentMenu("Toxic/Movement/Movement Commander")]
-[RequireComponent(typeof(CameraController))]
-public class MovementCommander : MonoBehaviour
-{
-	private IMovementController _mc;
-	private CameraController _cc;
-
-	private Vector3 _prev_dir = Vector3.zero;
-	private bool _prev_jump = false;
-
-	void Start()
+	[AddComponentMenu("Toxic/Movement/Movement Commander")]
+	[RequireComponent(typeof(CameraController))]
+	public class MovementCommander : MonoBehaviour
 	{
-		_cc = GetComponent<CameraController>();
-	}
+		private MovementControllerBase _mc;
+		private CameraController _cc;
 
-	void Update()
-	{
-		if (Input.GetButtonDown("Possess")) {
-			if (_cc.IsPossessing()) {
-				_cc.UnPossess();
-				_mc = null;
+		private Vector3 _prev_dir = Vector3.zero;
+		private bool _prev_jump = false;
 
-			} else {
-				RaycastHit hitInfo = new RaycastHit();
+		void Start()
+		{
+			_cc = GetComponent<CameraController>();
+		}
 
-				if (Physics.Raycast(transform.position, transform.forward, out hitInfo)) {
-					_mc = hitInfo.transform.gameObject.GetComponent<IMovementController>();
+		void Update()
+		{
+			if (Input.GetButtonDown("Possess")) {
+				if (_cc.IsPossessing()) {
+					_cc.UnPossess();
+					_mc = null;
 
-					if (_mc != null) {
-						_cc.Possess(hitInfo.transform.gameObject);
+				} else {
+					RaycastHit hitInfo = new RaycastHit();
+
+					if (Physics.Raycast(transform.position, transform.forward, out hitInfo)) {
+						_mc = hitInfo.transform.gameObject.GetComponent<MovementControllerBase>();
+
+						if (_mc != null) {
+							_cc.Possess(hitInfo.transform.gameObject);
+						}
 					}
+				}
+			}
+
+			// For some reason this doesn't update immediately. There is some stutter when moving the camera.
+			if (_mc != null) {
+				bool jump = Input.GetButtonDown("Jump");
+
+				// Don't spam the network with redundant data.
+				if (jump != _prev_jump) {
+					_mc.Jump(jump);
+					_prev_jump = jump;
+				}
+
+				if (!_mc.ControlsOrientation()) {
+					Vector3 dir = transform.forward;
+					dir.y = 0.0f;
+
+					_mc.transform.LookAt(_mc.transform.position + dir);
 				}
 			}
 		}
 
-		// For some reason this doesn't update immediately. There is some stutter when moving the camera.
-		if (_mc != null) {
-			bool jump = Input.GetButtonDown("Jump");
+		void FixedUpdate()
+		{
+			if (_mc != null) {
+				Vector3 dir = transform.TransformDirection(Input.GetAxis("Horizontal"), 0.0f, Input.GetAxis("Vertical"));
 
-			// Don't spam the network with redundant data.
-			if (jump != _prev_jump) {
-				_mc.Jump(jump);
-				_prev_jump = jump;
-			}
-
-			if (!_mc.ControlsOrientation()) {
-				Vector3 dir = transform.forward;
-				dir.y = 0.0f;
-
-				_mc.GetGameObject().transform.LookAt(_mc.GetGameObject().transform.position + dir);
+				// Don't spam the network with redundant data.
+				if (dir != _prev_dir) {
+					_mc.MoveTowards(dir);
+					_prev_dir = dir;
+				}
 			}
 		}
 	}
-
-	void FixedUpdate()
-	{
-		if (_mc != null) {
-			Vector3 dir = transform.TransformDirection(Input.GetAxis("Horizontal"), 0.0f, Input.GetAxis("Vertical"));
-
-			// Don't spam the network with redundant data.
-			if (dir != _prev_dir) {
-				_mc.MoveTowards(dir);
-				_prev_dir = dir;
-			}
-		}
-	}
-}
 
 }
