@@ -57,7 +57,7 @@ namespace Toxic
 			_rb = GetComponent<Rigidbody>();
 		}
 
-		public void FixedUpdate()
+		override public void FixedUpdateImpl()
 		{
 			MoveTowardsImpl(_move_dir);
 			JumpImpl();

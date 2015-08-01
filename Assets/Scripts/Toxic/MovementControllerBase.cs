@@ -26,11 +26,26 @@ using System.Collections;
 namespace Toxic
 {
 
+	//public interface IMovementController
+	//{
+	//	void FixedUpdateImpl();
+
+	//	bool ControlsOrientation();
+
+	//	// Dir is world space direction.
+	//	void MoveTowards(Vector3 dir);
+	//	void Jump(bool jump);
+	//}
+
 	public class MovementControllerBase : MonoBehaviour
 	{
 		protected Vector3 _move_dir = Vector3.zero;
 		protected bool _prev_jump = false;
 		protected bool _jump = false;
+
+		virtual public void FixedUpdateImpl()
+		{
+		}
 
 		virtual public bool ControlsOrientation()
 		{

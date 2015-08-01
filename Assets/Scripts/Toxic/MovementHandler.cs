@@ -28,22 +28,87 @@ namespace Toxic
 	/*
 		The intention is to have a mediator for issuing movement commands.
 		Basically, if we're connected to a server, issue command to server.
-		Otherwise, we are in a singleplayer game, just do it locally.
+		Otherwise, we are in a singleplayer game or are the server, do it locally.
 	*/
 	[AddComponentMenu("Toxic/Movement/Movement Handler")]
 	public class MovementHandler : MonoBehaviour
 	{
+		public delegate void MoveTowardsCallback(Vector3 dir);
+		public delegate void JumpCallback(bool jump);
+		public delegate void FixedUpdateCallback();
+
 		private Toxic.NetworkManager _net_mgr = null;
+		private MovementControllerBase _mc = null;
+
+		public FixedUpdateCallback fixedUpdate;
+		public MoveTowardsCallback moveTowards;
+		public JumpCallback jumpCB;
 
 		void Start()
 		{
 			_net_mgr = Toxic.NetworkManager.FindNetMgrInstance();
+			_mc = GetComponent<MovementControllerBase>();
 
-			if (!_net_mgr || _net_mgr.isSingleplayer) {
+			// Update locally
+			if (!_net_mgr || _net_mgr.isSingleplayer || _net_mgr.isServer) {
+				fixedUpdate += LocalFixedUpdate;
+				moveTowards += LocalMoveTowards;
+				jumpCB += LocalJump;
+
 				_net_mgr = null;
+
+			// We are a client, so the server will update our position
+			} else {
+				// If there are no callbacks, add empty ones so we don't throw exceptions.
+				if (fixedUpdate == null) {
+					fixedUpdate += () => {};
+				}
+
+				if (moveTowards == null) {
+					moveTowards += (Vector3 dir) => {};
+				}
+
+				if (jumpCB == null) {
+					jumpCB += (bool jump) => {};
+				}
 			}
 		}
 
+		void FixedUpdate()
+		{
+			fixedUpdate();
+		}
+
+		public bool ControlsOrientation()
+		{
+			return _mc.ControlsOrientation();
+		}
+
+		// Dir is world space direction.
+		public void MoveTowards(Vector3 dir)
+		{
+			moveTowards(dir);
+		}
+
+		public void Jump(bool jump)
+		{
+			jumpCB(jump);
+		}
+
+		private void LocalFixedUpdate()
+		{
+			_mc.FixedUpdateImpl();
+		}
+
+		private void LocalMoveTowards(Vector3 dir)
+		{
+			_mc.MoveTowards(dir);
+		}
+
+		private void LocalJump(bool jump)
+		{
+			_mc.Jump(jump);
+		}
 	}
 
 }

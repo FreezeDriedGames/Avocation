@@ -48,7 +48,7 @@ namespace Toxic
 			_rb.maxAngularVelocity = float.PositiveInfinity;
 		}
 
-		public void FixedUpdate()
+		override public void FixedUpdateImpl()
 		{
 			MoveTowardsImpl(_move_dir);
 			JumpImpl();
