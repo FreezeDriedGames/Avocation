@@ -89,44 +89,49 @@ namespace Toxic
 			_time_cache %= _spawn_time;
 
 			for (int i = 0; i < num_particles; ++i) {
-				ParticleSystem.Particle particle = new ParticleSystem.Particle();
-				particle.angularVelocity = startAngularVelocity;
-				particle.axisOfRotation = startAxisOfRotation;
-				particle.color = _ps.startColor;
-				particle.lifetime = _ps.startLifetime;
-				particle.randomSeed = (uint)Random.Range(0.0f, (float)uint.MaxValue);
-				particle.rotation = _ps.startRotation;
-				particle.size = _ps.startSize;
-				particle.startLifetime = _ps.startLifetime;
-				particle.velocity = new Vector3(_ps.startSpeed, _ps.startSpeed, _ps.startSpeed);
-
-				int triangle_index = Random.Range(0, _tris.Length / 3);
-				int vert_index = Random.Range(0, 2);
-				int index_origin = _tris[triangle_index * 3 + vert_index];
-				int index_a = _tris[triangle_index * 3 + ((vert_index + 1) % 2)];
-				int index_b = _tris[triangle_index * 3 + ((vert_index + 2) % 2)];
-
-				Vector3 dir = Vector3.Lerp(_verts[index_a], _verts[index_b], Random.value);
-				dir -= _verts[index_origin];
-				dir.Normalize();
-
-				particle.velocity = Vector3.Scale(particle.velocity, dir);
-				particle.position = _verts[index_origin];
-
-				if (useVertColor && _colors.Length > 0) {
-					particle.color = _colors[index_origin];
-				}
-
-				// Apparently calling Scale() on the object itself is broken and doesn't actually work ... how do you fuck that up?
-				//particle.velocity.Scale(dir);
-
-				if (_ps.simulationSpace == ParticleSystemSimulationSpace.World) {
-					particle.position = transform.TransformPoint(particle.position);
-					particle.velocity = transform.TransformVector(particle.velocity);
-				}
-
-				_ps.Emit(particle);
+				SpawnParticle();
 			}
+		}
+
+		private void SpawnParticle()
+		{
+			ParticleSystem.Particle particle = new ParticleSystem.Particle();
+			particle.angularVelocity = startAngularVelocity;
+			particle.axisOfRotation = startAxisOfRotation;
+			particle.color = _ps.startColor;
+			particle.lifetime = _ps.startLifetime;
+			particle.randomSeed = (uint)Random.Range(0.0f, (float)uint.MaxValue);
+			particle.rotation = _ps.startRotation;
+			particle.size = _ps.startSize;
+			particle.startLifetime = _ps.startLifetime;
+			particle.velocity = new Vector3(_ps.startSpeed, _ps.startSpeed, _ps.startSpeed);
+
+			int triangle_index = Random.Range(0, _tris.Length / 3);
+			int vert_index = Random.Range(0, 2);
+			int index_origin = _tris[triangle_index * 3 + vert_index];
+			int index_a = _tris[triangle_index * 3 + ((vert_index + 1) % 2)];
+			int index_b = _tris[triangle_index * 3 + ((vert_index + 2) % 2)];
+
+			Vector3 dir = Vector3.Lerp(_verts[index_a], _verts[index_b], Random.value);
+			dir -= _verts[index_origin];
+			dir.Normalize();
+
+			particle.velocity = Vector3.Scale(particle.velocity, dir);
+			particle.position = _verts[index_origin];
+
+			if (useVertColor && _colors.Length > 0) {
+				particle.color = _colors[index_origin];
+			}
+
+			// Apparently calling Scale() on the object itself is broken and doesn't actually work ... how do you fuck that up?
+			//particle.velocity.Scale(dir);
+
+			if (_ps.simulationSpace == ParticleSystemSimulationSpace.World) {
+				particle.position = transform.TransformPoint(particle.position);
+				particle.velocity = transform.TransformVector(particle.velocity);
+			}
+
+			_ps.Emit(particle);
 		}
 	}
 
