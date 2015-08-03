@@ -20,17 +20,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ************************************************************************************/
 
-/************************************************************************************
-TODO:	Add support for skinned meshes! I'm unsure if SkinnedMeshRenderer.mesh is
-		updated as the skinning is updated. May have to call BakeMesh() on it.
-************************************************************************************/
-
 using UnityEngine;
 using System.Collections;
 
 namespace Toxic
 {
-
+	/*
+		NOTE:	If using a SkinnedMeshRenderer in conjunction with ParticleMesh, you
+				will have to manually turn of all of the rendering options on it.
+	*/
 	[AddComponentMenu("Toxic/Rendering/Particle Mesh")]
 	[RequireComponent(typeof(ParticleSystem))]
 	[ExecuteInEditMode] // So I can preview what it's actually doing in the editor
@@ -40,7 +38,10 @@ namespace Toxic
 		public Vector3 startAxisOfRotation = Vector3.zero;
 		public bool useVertColor = false;
 
+		private SkinnedMeshRenderer _smr = null;
 		private ParticleSystem _ps = null;
+
+		private Mesh _mesh = null;
 		private Vector3[] _verts = null;
 		private int[] _tris = null;
 		private Color32[] _colors = null;
@@ -50,23 +51,28 @@ namespace Toxic
 
 		void Start()
 		{
-			SkinnedMeshRenderer smr = GetComponent<SkinnedMeshRenderer>();
 			MeshFilter mesh_filter = GetComponent<MeshFilter>();
+			_smr = GetComponent<SkinnedMeshRenderer>();
 			_ps = GetComponent<ParticleSystem>();
 
 			// Ideally, I'd like a popup to occur in the editor when we add the component an object.
 			// Something like RequireComponent(SkinnedMeshRenderer) || RequireComponent(MeshFilter)
-			if (!smr && !mesh_filter) {
+			if (!_smr && !mesh_filter) {
 				Debug.LogError("'" + name + "' must have either a SkinnedMeshRenderer or a MeshFilter!");
 				enabled = false;
 				return;
 			}
 
-			Mesh mesh = (smr) ? smr.sharedMesh : mesh_filter.sharedMesh;
+			if (_smr) {
+				_mesh = new Mesh();
+				_smr.BakeMesh(_mesh);
+			} else {
+				_mesh = mesh_filter.sharedMesh;
+			}
 
-			_verts = mesh.vertices;
-			_tris = mesh.triangles;
-			_colors = mesh.colors32;
+			_verts = _mesh.vertices;
+			_tris = _mesh.triangles;
+			_colors = _mesh.colors32;
 
 			_ps.enableEmission = false;
 
@@ -85,8 +91,17 @@ namespace Toxic
 #else
 			_time_cache += Time.deltaTime;
 #endif
+
 			int num_particles = Mathf.RoundToInt(_time_cache / _spawn_time);
 			_time_cache %= _spawn_time;
+
+			if (_smr) {
+				// Baking the mesh every frame is probably expensive, but I don't see any way around it.
+				_smr.BakeMesh(_mesh);
+				_verts = _mesh.vertices;
+				_tris = _mesh.triangles;
+				_colors = _mesh.colors32;
+			}
 
 			for (int i = 0; i < num_particles; ++i) {
 				SpawnParticle();
@@ -107,7 +122,7 @@ namespace Toxic
 			particle.velocity = new Vector3(_ps.startSpeed, _ps.startSpeed, _ps.startSpeed);
 
 			int triangle_index = Random.Range(0, _tris.Length / 3);
-			int vert_index = Random.Range(0, 2);
+			int vert_index = Random.Range(0, 3);
 			int index_origin = _tris[triangle_index * 3 + vert_index];
 			int index_a = _tris[triangle_index * 3 + ((vert_index + 1) % 2)];
 			int index_b = _tris[triangle_index * 3 + ((vert_index + 2) % 2)];
